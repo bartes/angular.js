@@ -96,10 +96,10 @@ function convertToHashbangUrl(url, basePath, hashPrefix) {
 
 /**
  * LocationUrl represents an url
- * This object is exposed as $location service when html5 is enabled and supported
+ * This object is exposed as $location service when HTML5 mode is enabled and supported
  *
  * @constructor
- * @param {string} url Html5 url
+ * @param {string} url HTML5 url
  * @param {string} pathPrefix
  */
 function LocationUrl(url, pathPrefix) {
@@ -107,7 +107,7 @@ function LocationUrl(url, pathPrefix) {
 
   /**
    * Parse given html5 (regular) url string into properties
-   * @param {string} url Html5 url
+   * @param {string} url HTML5 url
    * @private
    */
   this.$$parse = function(url) {
@@ -400,7 +400,7 @@ function locationGetterSetter(property, preprocess) {
  *
  * @requires $browser
  * @requires $sniffer
- * @requires $config
+ * @requires $locationConfig
  * @requires $document
  *
  * @description
@@ -419,14 +419,14 @@ function locationGetterSetter(property, preprocess) {
  *
  * For more information see {@link guide/dev_guide.services.$location Developer Guide: Angular Services: Using $location}
  */
-angularServiceInject('$location', function($browser, $sniffer, $config, $document) {
+angularServiceInject('$location', function($browser, $sniffer, $locationConfig, $document) {
   var scope = this, currentUrl,
       basePath = $browser.baseHref() || '/',
       pathPrefix = pathPrefixFromBase(basePath),
-      hashPrefix = $config.hashPrefix || '',
+      hashPrefix = $locationConfig.hashPrefix || '',
       initUrl = $browser.url();
 
-  if ($config.html5Mode) {
+  if ($locationConfig.html5Mode) {
     if ($sniffer.history) {
       currentUrl = new LocationUrl(convertToHtml5Url(initUrl, basePath, hashPrefix), pathPrefix);
     } else {
@@ -442,11 +442,16 @@ angularServiceInject('$location', function($browser, $sniffer, $config, $documen
       // TODO(vojta): rewrite link when opening in new tab/window (in legacy browser)
       // currently we open nice url link and redirect then
 
-      if (uppercase(event.target.nodeName) != 'A' || event.ctrlKey || event.which == 2) return;
+      if (event.ctrlKey || event.metaKey || event.which == 2) return;
 
-      var elm = jqLite(event.target),
-          href = elm.attr('href');
+      var elm = jqLite(event.target);
 
+      // traverse the DOM up to find first A tag
+      while (elm.length && lowercase(elm[0].nodeName) !== 'a') {
+        elm = elm.parent();
+      }
+
+      var href = elm.attr('href');
       if (!href || isDefined(elm.attr('ng:ext-link')) || elm.attr('target')) return;
 
       // remove same domain from full url links (IE7 always returns full hrefs)

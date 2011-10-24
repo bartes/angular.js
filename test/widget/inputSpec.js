@@ -256,13 +256,13 @@ describe('widget: input', function() {
 
 
         it('should allow custom enumeration', function() {
-          compile('<input type="checkbox" ng:model="name" true-value="ano" false-value="nie"/>');
+          compile('<input type="checkbox" ng:model="name" ng:true-value="y" ng:false-value="n">');
 
-          scope.name='ano';
+          scope.name='y';
           scope.$digest();
           expect(scope.$element[0].checked).toBe(true);
 
-          scope.name='nie';
+          scope.name='n';
           scope.$digest();
           expect(scope.$element[0].checked).toBe(false);
 
@@ -271,10 +271,10 @@ describe('widget: input', function() {
           expect(scope.$element[0].checked).toBe(false);
 
           browserTrigger(element);
-          expect(scope.name).toEqual('ano');
+          expect(scope.name).toEqual('y');
 
           browserTrigger(element);
-          expect(scope.name).toEqual('nie');
+          expect(scope.name).toEqual('n');
         });
 
 
@@ -402,6 +402,32 @@ describe('widget: input', function() {
         expect(inputs[0].checked).toBe(true);
         expect(inputs[1].checked).toBe(false);
       });
+
+
+      it('it should work with value attribute that is data-bound', function(){
+        compile(
+            '<li>'+
+              '<input ng:repeat="item in [\'a\', \'b\']" ' +
+              '       type="radio" ng:model="choice" value="{{item}}" name="choice">'+
+            '</li>');
+
+        var inputs = scope.$element.find('input');
+        expect(inputs[0].checked).toBe(false);
+        expect(inputs[1].checked).toBe(false);
+
+        scope.choice = 'b';
+        scope.$digest();
+        expect(inputs[0].checked).toBe(false);
+        expect(inputs[1].checked).toBe(true);
+      });
+    });
+
+
+    describe('password', function () {
+      it('should not change password type to text', function () {
+        compile('<input type="password" ng:model="name" >');
+        expect(element.attr('type')).toBe('password');
+      });
     });
 
 
@@ -528,9 +554,9 @@ describe('widget: input', function() {
         {min:0, max:1});
 
 
-    itShouldVerify('text with inlined pattern contraint',
+    itShouldVerify('text with inlined pattern constraint',
         ['', '000-00-0000', '123-45-6789'],
-        ['x000-00-0000x', 'x'],
+        ['x000-00-0000x', 'x000-00-0000', '000-00-0000x', 'x'],
         {'ng:pattern':'/^\\d\\d\\d-\\d\\d-\\d\\d\\d\\d$/'});
 
 
@@ -540,6 +566,18 @@ describe('widget: input', function() {
         {'ng:pattern':'regexp'}, function(scope){
           scope.regexp = /^\d\d\d-\d\d-\d\d\d\d$/;
         });
+
+
+    itShouldVerify('text with ng:minlength limit',
+        ['', 'aaa', 'aaaaa', 'aaaaaaaaa'],
+        ['a', 'aa'],
+        {'ng:minlength': 3});
+
+
+    itShouldVerify('text with ng:maxlength limit',
+        ['', 'a', 'aa', 'aaa'],
+        ['aaaa', 'aaaaa', 'aaaaaaaaa'],
+        {'ng:maxlength': 3});
 
 
     it('should throw an error when scope pattern can\'t be found', function() {

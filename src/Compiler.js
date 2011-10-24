@@ -33,7 +33,14 @@ Template.prototype = {
         paths = this.paths,
         length = paths.length;
     for (i = 0; i < length; i++) {
-      children[i].link(jqLite(childNodes[paths[i]]), childScope);
+      // sometimes `element` can be modified by one of the linker functions in `this.linkFns`
+      // and childNodes may be added or removed
+      // TODO: element structure needs to be re-evaluated if new children added
+      // if the childNode still exists
+      if (childNodes[paths[i]])
+        children[i].link(jqLite(childNodes[paths[i]]), childScope);
+      else
+        delete paths[i]; // if child no longer available, delete path
     }
   },
 
@@ -111,6 +118,15 @@ Template.prototype = {
  * Calling the template function returns the scope to which the element is bound to. It is either
  * the same scope as the one passed into the template function, or if none were provided it's the
  * newly create scope.
+ *
+ * It is important to understand that the returned scope is "linked" to the view DOM, but no linking
+ * (instance) functions registered by {@link angular.directive directives} or
+ * {@link angular.widget widgets} found in the template have been executed yet. This means that the
+ * view is likely empty and doesn't contain any values that result from evaluation on the scope. To
+ * bring the view to life, the scope needs to run through a $digest phase which typically is done by
+ * Angular automatically, except for the case when an application is being
+ * {@link guide/dev_guide.bootstrap.manual_bootstrap} manually bootstrapped, in which case the
+ * $digest phase must be invoked by calling {@link angular.scope.$apply}.
  *
  * If you need access to the bound view, there are two ways to do it:
  *
@@ -202,7 +218,6 @@ Compiler.prototype = {
       scope.$element = element;
       (cloneConnectFn||noop)(element, scope);
       template.link(element, scope);
-      if (!scope.$$phase) scope.$digest();
       return scope;
     };
   },

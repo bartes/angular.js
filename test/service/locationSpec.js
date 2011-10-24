@@ -556,10 +556,11 @@ describe('$location', function() {
 
     var root, link, extLink, $browser, originalBrowser, lastEventPreventDefault;
 
-    function init(linkHref, html5Mode, supportHist, attrs) {
+    function init(linkHref, html5Mode, supportHist, attrs, content) {
       var jqRoot = jqLite('<div></div>');
       attrs = attrs ? ' ' + attrs + ' ' : '';
-      link = jqLite('<a href="' + linkHref + '"' + attrs + '>link</a>')[0];
+      content = content || 'link';
+      link = jqLite('<a href="' + linkHref + '"' + attrs + '>' + content + '</a>')[0];
       root = jqRoot.append(link)[0];
 
       jqLite(document.body).append(jqRoot);
@@ -584,14 +585,12 @@ describe('$location', function() {
       });
     }
 
-    function triggerAndExpectRewriteTo(url) {
-      browserTrigger(link, 'click');
+    function expectRewriteTo(url) {
       expect(lastEventPreventDefault).toBe(true);
       expect($browser.url()).toBe(url);
     }
 
-    function triggerAndExpectNoRewrite() {
-      browserTrigger(link, 'click');
+    function expectNoRewrite() {
       expect(lastEventPreventDefault).toBe(false);
       expect($browser.url()).toBe(originalBrowser);
     }
@@ -604,61 +603,98 @@ describe('$location', function() {
 
     it('should rewrite rel link to new url when history enabled on new browser', function() {
       init('link?a#b', true, true);
-      triggerAndExpectRewriteTo('http://host.com/base/link?a#b');
+      browserTrigger(link, 'click');
+      expectRewriteTo('http://host.com/base/link?a#b');
     });
 
 
     it('should rewrite abs link to new url when history enabled on new browser', function() {
       init('/base/link?a#b', true, true);
-      triggerAndExpectRewriteTo('http://host.com/base/link?a#b');
+      browserTrigger(link, 'click');
+      expectRewriteTo('http://host.com/base/link?a#b');
     });
 
 
     it('should rewrite rel link to hashbang url when history enabled on old browser', function() {
       init('link?a#b', true, false);
-      triggerAndExpectRewriteTo('http://host.com/base/index.html#!/link?a#b');
+      browserTrigger(link, 'click');
+      expectRewriteTo('http://host.com/base/index.html#!/link?a#b');
     });
 
 
     it('should rewrite abs link to hashbang url when history enabled on old browser', function() {
       init('/base/link?a#b', true, false);
-      triggerAndExpectRewriteTo('http://host.com/base/index.html#!/link?a#b');
+      browserTrigger(link, 'click');
+      expectRewriteTo('http://host.com/base/index.html#!/link?a#b');
     });
 
 
     it('should not rewrite when history disabled', function() {
       init('#new', false);
-      triggerAndExpectNoRewrite();
+      browserTrigger(link, 'click');
+      expectNoRewrite();
     });
 
 
     it('should not rewrite ng:ext-link', function() {
       init('#new', true, true, 'ng:ext-link');
-      triggerAndExpectNoRewrite();
+      browserTrigger(link, 'click');
+      expectNoRewrite();
     });
 
 
     it('should not rewrite full url links do different domain', function() {
       init('http://www.dot.abc/a?b=c', true);
-      triggerAndExpectNoRewrite();
+      browserTrigger(link, 'click');
+      expectNoRewrite();
     });
 
 
     it('should not rewrite links with target="_blank"', function() {
       init('/a?b=c', true, true, 'target="_blank"');
-      triggerAndExpectNoRewrite();
+      browserTrigger(link, 'click');
+      expectNoRewrite();
     });
 
 
     it('should not rewrite links with target specified', function() {
       init('/a?b=c', true, true, 'target="some-frame"');
-      triggerAndExpectNoRewrite();
+      browserTrigger(link, 'click');
+      expectNoRewrite();
     });
 
 
     it('should rewrite full url links to same domain and base path', function() {
       init('http://host.com/base/new', true);
-      triggerAndExpectRewriteTo('http://host.com/base/index.html#!/new');
+      browserTrigger(link, 'click');
+      expectRewriteTo('http://host.com/base/index.html#!/new');
     });
+
+
+    it('should rewrite when clicked span inside link', function() {
+      init('some/link', true, true, '', '<span>link</span>');
+      var span = jqLite(link).find('span');
+
+      browserTrigger(span, 'click');
+      expectRewriteTo('http://host.com/base/some/link');
+    });
+
+
+    // don't run next tests on IE<9, as browserTrigger does not simulate pressed keys
+    if (!(msie < 9)) {
+
+      it('should not rewrite when clicked with ctrl pressed', function() {
+        init('/a?b=c', true, true);
+        browserTrigger(link, 'click', ['ctrl']);
+        expectNoRewrite();
+      });
+
+
+      it('should not rewrite when clicked with meta pressed', function() {
+        init('/a?b=c', true, true);
+        browserTrigger(link, 'click', ['meta']);
+        expectNoRewrite();
+      });
+    }
   });
 });
