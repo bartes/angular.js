@@ -718,6 +718,7 @@ angularWidget('input', function(inputElement){
           // We have to use .getAttribute, since jQuery tries to be smart and use the
           // type property. Trouble is some browser change unknown to text.
           type = inputElement[0].getAttribute('type') || 'text',
+          typeForAngular = inputElement[0].getAttribute('ng:type') || type,
           TypeController,
           modelScope = this,
           patternMatch, widget,
@@ -747,9 +748,11 @@ angularWidget('input', function(inputElement){
        }
 
       type = lowercase(type);
+      typeForAngular = lowercase(typeForAngular);
+
       TypeController = (loadFromScope
               ? (assertArgFn(this.$eval(loadFromScope[1]), loadFromScope[1])).$unboundFn
-              : angularInputType(type)) || noop;
+              : angularInputType(typeForAngular)) || noop;
 
       if (!HTML5_INPUTS_TYPES[type]) {
         try {
