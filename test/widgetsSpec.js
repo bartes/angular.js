@@ -254,7 +254,7 @@ describe("widget", function() {
                                   'ng:bind="key + \':\' + val + $index + \'|\'"></li></ul>');
       scope.items = {'misko':'m', 'shyam':'s', 'frodo':'f'};
       scope.$digest();
-      expect(element.text()).toEqual('misko:m0|shyam:s1|frodo:f2|');
+      expect(element.text()).toEqual('frodo:f0|misko:m1|shyam:s2|');
     });
 
     it('should expose iterator position as $position when iterating over arrays', function() {
@@ -282,7 +282,7 @@ describe("widget", function() {
         '</ul>');
       scope.items = {'misko':'m', 'shyam':'s', 'doug':'d', 'frodo':'f'};
       scope.$digest();
-      expect(element.text()).toEqual('misko:m:first|shyam:s:middle|doug:d:middle|frodo:f:last|');
+      expect(element.text()).toEqual('doug:d:first|frodo:f:middle|misko:m:middle|shyam:s:last|');
 
       delete scope.items.doug;
       delete scope.items.frodo;
@@ -310,6 +310,26 @@ describe("widget", function() {
       scope.$digest();
 
       expect(element.text()).toEqual('a|b|Xc|d|X');
+    });
+
+    it('should ignore non-array element properties when iterating over an array', function() {
+      var scope = compile('<ul><li ng:repeat="item in array">{{item}}|</li></ul>');
+      scope.array = ['a', 'b', 'c'];
+      scope.array.foo = '23';
+      scope.array.bar = function() {};
+      scope.$digest();
+
+      expect(element.text()).toBe('a|b|c|');
+    });
+
+    it('should iterate over non-existent elements of a sparse array', function() {
+      var scope = compile('<ul><li ng:repeat="item in array">{{item}}|</li></ul>');
+      scope.array = ['a', 'b'];
+      scope.array[4] = 'c';
+      scope.array[6] = 'd';
+      scope.$digest();
+
+      expect(element.text()).toBe('a|b|||c||d|');
     });
 
 
@@ -429,14 +449,13 @@ describe("widget", function() {
 
 
     it('should load content via xhr when route changes', function() {
-      $route.when('/foo', {controller: angular.noop, template: 'myUrl1'});
-      $route.when('/bar', {controller: angular.noop, template: 'myUrl2'});
+      $route.when('/foo', {template: 'myUrl1'});
+      $route.when('/bar', {template: 'myUrl2'});
 
       expect(rootScope.$element.text()).toEqual('');
 
       $location.path('/foo');
       $browser.xhr.expectGET('myUrl1').respond('<div>{{1+3}}</div>');
-      rootScope.$digest();
       rootScope.$digest();
       $browser.xhr.flush();
       expect(rootScope.$element.text()).toEqual('4');
@@ -444,40 +463,35 @@ describe("widget", function() {
       $location.path('/bar');
       $browser.xhr.expectGET('myUrl2').respond('angular is da best');
       rootScope.$digest();
-      rootScope.$digest();
       $browser.xhr.flush();
       expect(rootScope.$element.text()).toEqual('angular is da best');
     });
 
     it('should remove all content when location changes to an unknown route', function() {
-      $route.when('/foo', {controller: angular.noop, template: 'myUrl1'});
+      $route.when('/foo', {template: 'myUrl1'});
 
       $location.path('/foo');
       $browser.xhr.expectGET('myUrl1').respond('<div>{{1+3}}</div>');
-      rootScope.$digest();
       rootScope.$digest();
       $browser.xhr.flush();
       expect(rootScope.$element.text()).toEqual('4');
 
       $location.path('/unknown');
       rootScope.$digest();
-      rootScope.$digest();
       expect(rootScope.$element.text()).toEqual('');
     });
 
     it('should chain scopes and propagate evals to the child scope', function() {
-      $route.when('/foo', {controller: angular.noop, template: 'myUrl1'});
+      $route.when('/foo', {template: 'myUrl1'});
       rootScope.parentVar = 'parent';
 
       $location.path('/foo');
       $browser.xhr.expectGET('myUrl1').respond('<div>{{parentVar}}</div>');
       rootScope.$digest();
-      rootScope.$digest();
       $browser.xhr.flush();
       expect(rootScope.$element.text()).toEqual('parent');
 
       rootScope.parentVar = 'new parent';
-      rootScope.$digest();
       rootScope.$digest();
       expect(rootScope.$element.text()).toEqual('new parent');
     });
@@ -510,7 +524,7 @@ describe("widget", function() {
 
     it('should initialize view template after the view controller was initialized even when ' +
        'templates were cached', function() {
-      //this is a test for a regression that was introduced by making the ng:view cache sync
+      // this is a test for a regression that was introduced by making the ng:view cache sync
 
       $route.when('/foo', {controller: ParentCtrl, template: 'viewPartial.html'});
 
@@ -544,6 +558,26 @@ describe("widget", function() {
       $browser.defer.flush();
 
       expect(rootScope.log).toEqual(['parent', 'init', 'child']);
+    });
+
+    it('should discard pending xhr callbacks if a new route is requested before the current ' +
+        'finished loading', function() {
+      // this is a test for a bad race condition that affected feedback
+
+      $route.when('/foo', {template: 'myUrl1'});
+      $route.when('/bar', {template: 'myUrl2'});
+
+      expect(rootScope.$element.text()).toEqual('');
+
+      $location.path('/foo');
+      $browser.xhr.expectGET('myUrl1').respond('<div>{{1+3}}</div>');
+      rootScope.$digest();
+      $location.path('/bar');
+      $browser.xhr.expectGET('myUrl2').respond('<div>{{1+1}}</div>');
+      rootScope.$digest();
+      $browser.xhr.flush(); // now that we have to requests pending, flush!
+
+      expect(rootScope.$element.text()).toEqual('2');
     });
   });
 

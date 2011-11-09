@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * @ngdoc overview
+ * @ngdoc function
  * @name angular.directive
  * @description
  *
@@ -39,6 +39,24 @@
  * For more information about how Angular directives work, and to learn how to create your own
  * directives, see {@link guide/dev_guide.compiler.directives Understanding Angular Directives} in
  * the Angular Developer Guide.
+ *
+ * @param {string} name Directive identifier (case insensitive).
+ * @param {function(string, Element)} compileFn Also called "template function" is a function called
+ *    during compilation of the template when the compiler comes across the directive being
+ *    registered. The string value of the element attribute representing the directive and
+ *    jQuery/jqLite wrapped DOM element are passed as arguments to this function.
+ *
+ *    The `compileFn` function may return a linking function also called an instance function.
+ *    This function is called during the linking phase when a Scope is being associated with the
+ *    template or template clone (see repeater notes below). The signature of the linking function
+ *    is: `function(Element)` where Element is jQuery/jqLite wrapped DOM Element that is being
+ *    linked.
+ *
+ * The biggest differenciator between the compile and linking functions is how they are being called
+ * when a directive is present within an {@link angular.widget.@ng:repeat ng:repeat}. In this case,
+ * the compile function gets called once per occurence of the directive in the template. On the
+ * other hand the linking function gets called once for each repeated clone of the template (times
+ * number of occurences of the directive in the repeated template).
  */
 
 /**
@@ -374,17 +392,27 @@ angularDirective("ng:bind-template", function(expression, element){
  *
  * Instead of writing `ng:bind-attr` statements in your HTML, you can use double-curly markup to
  * specify an <tt ng:non-bindable>{{expression}}</tt> for the value of an attribute.
- * At compile time, the attribute is translated into an `<span ng:bind-attr="{attr:expression}"/>`
+ * At compile time, the attribute is translated into an
+ * `<span ng:bind-attr="{attr:expression}"></span>`.
  *
  * The following HTML snippet shows how to specify `ng:bind-attr`:
+ * <pre>
+ *   <a ng:bind-attr='{"href":"http://www.google.com/search?q={{query}}"}'>Google</a>
+ * </pre>
+ *
+ * This is cumbersome, so as we mentioned using double-curly markup is a prefered way of creating
+ * this binding:
  * <pre>
  *   <a href="http://www.google.com/search?q={{query}}">Google</a>
  * </pre>
  *
- * During compilation, the snippet gets translated to the following:
- * <pre>
- *   <a ng:bind-attr='{"href":"http://www.google.com/search?q={{query}}"}'>Google</a>
- * </pre>
+ * During compilation, the template with attribute markup gets translated to the ng:bind-attr form
+ * mentioned above.
+ *
+ * _Note_: You might want to consider using {@link angular.directive.ng:href ng:href} instead of
+ * `href` if the binding is present in the main application template (`index.html`) and you want to
+ * make sure that a user is not capable of clicking on raw/uncompiled link.
+ *
  *
  * @element ANY
  * @param {string} attribute_json one or more JSON key-value pairs representing
@@ -406,7 +434,11 @@ angularDirective("ng:bind-template", function(expression, element){
        <div ng:controller="Ctrl">
         Google for:
         <input type="text" ng:model="query"/>
+        <a ng:bind-attr='{"href":"http://www.google.com/search?q={{query}}"}'>
+          Google
+        </a> (ng:bind-attr) |
         <a href="http://www.google.com/search?q={{query}}">Google</a>
+        (curly binding in attribute val)
        </div>
      </doc:source>
      <doc:scenario>
@@ -788,21 +820,11 @@ angularDirective("ng:hide", function(expression, element){
      </doc:scenario>
    </doc:example>
  */
-angularDirective("ng:style", function(expression, element){
-  // TODO(i): this is inefficient (runs on every $digest) and obtrusive (overrides 3rd part css)
-  //   we should change it in a similar way as I changed ng:class
-  return function(element){
-    var resetStyle = getStyle(element);
-    this.$watch(function(scope){
-      var style = scope.$eval(expression) || {}, key, mergedStyle = {};
-      for(key in style) {
-        if (resetStyle[key] === undefined) resetStyle[key] = '';
-        mergedStyle[key] = style[key];
-      }
-      for(key in resetStyle) {
-        mergedStyle[key] = mergedStyle[key] || resetStyle[key];
-      }
-      element.css(mergedStyle);
+angularDirective("ng:style", function(expression, element) {
+  return function(element) {
+    this.$watch(expression, function(scope, newStyles, oldStyles) {
+      if (oldStyles) forEach(oldStyles, function(val, style) { element.css(style, '');});
+      if (newStyles) element.css(newStyles);
     });
   };
 });

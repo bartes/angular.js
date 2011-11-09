@@ -1,5 +1,5 @@
-DocsController.$inject = ['$location', '$browser', '$window', '$cookies'];
-function DocsController($location, $browser, $window, $cookies) {
+DocsController.$inject = ['$location', '$window', '$cookies'];
+function DocsController($location, $window, $cookies) {
   window.$root = this.$root;
 
   var scope = this,
@@ -26,26 +26,25 @@ function DocsController($location, $browser, $window, $cookies) {
       scope.sectionId = parts[1];
       scope.partialId = parts[2] || 'index';
       scope.pages = angular.Array.filter(NG_PAGES, {section: scope.sectionId});
-      scope.loading++;
 
       var i = scope.pages.length;
       while (i--) {
-        if (scope.pages[i].id == scope.partialId) {
-          // TODO(i): this is not ideal but better than updating the title before a partial arrives,
-          //   which results in the old partial being displayed with the new title
-          scope.futurePartialTitle = scope.pages[i].name;
-          break;
-        }
+        if (scope.pages[i].id == scope.partialId) break;
       }
       if (i<0) {
         scope.partialTitle = 'Error: Page Not Found!';
         delete scope.partialId;
+      } else {
+        // TODO(i): this is not ideal but better than updating the title before a partial arrives,
+        //   which results in the old partial being displayed with the new title
+        scope.futurePartialTitle = scope.pages[i].name;
+        scope.loading++;
       }
     }
   });
 
   scope.getUrl = function(page) {
-    return page.section + '/' + page.id;
+    return page.section + (page.id == 'index' ? '' : '/' + page.id);
   };
 
   scope.getCurrentPartial = function() {
@@ -71,17 +70,13 @@ function DocsController($location, $browser, $window, $cookies) {
   };
 
   scope.afterPartialLoaded = function() {
+    var currentPageId = $location.path();
     scope.loading--;
     scope.partialTitle = scope.futurePartialTitle;
     SyntaxHighlighter.highlight();
     $window.scrollTo(0,0);
-    $window._gaq.push(['_trackPageview', $location.path()]);
-  };
-
-  scope.getFeedbackUrl = function() {
-    return "mailto:angular@googlegroups.com?" +
-           "subject=" + escape("Feedback on " + $location.absUrl()) + "&" +
-           "body=" + escape("Hi there,\n\nI read " + $location.absUrl() + " and wanted to ask ....");
+    $window._gaq.push(['_trackPageview', currentPageId]);
+    loadDisqus(currentPageId);
   };
 
   /** stores a cookie that is used by apache to decide which manifest ot send */
@@ -105,6 +100,26 @@ function DocsController($location, $browser, $window, $cookies) {
       });
     }
   });
+
+  function loadDisqus(currentPageId) {
+    // http://docs.disqus.com/help/2/
+    window.disqus_shortname = 'angularjs';
+    window.disqus_identifier = currentPageId;
+
+    if ($location.host() == 'localhost') {
+      window.disqus_developer = 1;
+    }
+
+    // http://docs.disqus.com/developers/universal/
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://angularjs.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] ||
+        document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+
+    angular.element(document.getElementById('disqus_thread')).html('');
+  }
 }
 
 // prevent compilation of code

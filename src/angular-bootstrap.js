@@ -5,13 +5,21 @@
  * (c) 2010-2011 AngularJS http://angularjs.org
  * License: MIT
  */
-(function(window) {
+(function(window, document) {
 
   var filename = /^(.*\/)angular-bootstrap.js(#.*)?$/,
       scripts = document.getElementsByTagName("SCRIPT"),
+      autobind = scripts[scripts.length-1].getAttribute('ng:autobind'),
+      config,
       serverPath,
       match,
       globalVars = {};
+
+  if (autobind) {
+    config = {autobind: autobind};
+  } else {
+    config = (autobind == '') ? {autobind: true} : {}
+  }
 
   for(var j = 0; j < scripts.length; j++) {
     match = (scripts[j].src || "").match(filename);
@@ -99,8 +107,6 @@
     // empty the cache to prevent mem leaks
     globalVars = {};
 
-    var config = angularJsConfig(document);
-
     angularInit(config, document);
   }
 
@@ -110,5 +116,5 @@
     window.attachEvent('onload', onLoadListener);
   }
 
-})(window);
+})(window, document);
 
