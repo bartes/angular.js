@@ -581,8 +581,8 @@ function numericRegexpInputType(regexp, error) {
 
       widget.$emit(!filled || valid ? "$valid" : "$invalid", error);
       filled && (value = 1 * value);
-      widget.$emit(valid && value < min ? "$invalid" : "$valid", "MIN");
-      widget.$emit(valid && value > max ? "$invalid" : "$valid", "MAX");
+      widget.$emit(valid && value <= min ? "$invalid" : "$valid", "MIN");
+      widget.$emit(valid && value >= max ? "$invalid" : "$valid", "MAX");
     });
 
     widget.$parseView = function() {
