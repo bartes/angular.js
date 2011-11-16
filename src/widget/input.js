@@ -570,7 +570,7 @@ angularInputType('radio', function(inputElement) {
 
 function numericRegexpInputType(regexp, error) {
   return function(inputElement) {
-    var widget = this,
+    var widget = this;
 
     widget.$on('$validate', function(event){
       var value = widget.$viewValue,
