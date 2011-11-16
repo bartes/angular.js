@@ -571,18 +571,17 @@ angularInputType('radio', function(inputElement) {
 function numericRegexpInputType(regexp, error) {
   return function(inputElement) {
     var widget = this,
-        min = 1 * (inputElement.attr('min') || Number.MIN_VALUE),
-        max = 1 * (inputElement.attr('max') || Number.MAX_VALUE);
 
     widget.$on('$validate', function(event){
       var value = widget.$viewValue,
           filled = value && trim(value) != '',
-          valid = isString(value) && value.match(regexp);
-
+          valid = isString(value) && value.match(regexp),
+          min = inputElement.attr('min'),
+          max = inputElement.attr('max');
       widget.$emit(!filled || valid ? "$valid" : "$invalid", error);
       filled && (value = 1 * value);
-      widget.$emit(valid && value < min ? "$invalid" : "$valid", "MIN");
-      widget.$emit(valid && value > max ? "$invalid" : "$valid", "MAX");
+      widget.$emit(filled && valid && !isUndefined(min) && (min !== "") && value < (1 * min) ? "$invalid" : "$valid", "MIN");
+      widget.$emit(filled && valid && !isUndefined(max) && (max !== "") && value > (1 * max) ? "$invalid" : "$valid", "MAX");
     });
 
     widget.$parseView = function() {
