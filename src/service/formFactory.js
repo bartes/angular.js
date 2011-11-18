@@ -361,8 +361,8 @@ FormController.prototype.$createWidget = function(params) {
   // watch for scope changes and update the view appropriately
   modelScope.$watch(scopeGet, function(scope, value) {
     if (!equals(widget.$modelValue, value)) {
-      widget.$modelValue = copy(value);
-      widget.$parseModel ? widget.$parseModel() : (widget.$viewValue = widget.$modelValue);
+      widget.$modelValue = value;
+      widget.$parseModel ? widget.$parseModel() : (widget.$viewValue = value);
       widget.$emit('$validate');
       widget.$render && widget.$render();
     }
