@@ -372,7 +372,7 @@ FormController.prototype.$createWidget = function(params) {
     if (!equals(widget.$viewValue, viewValue)) {
       widget.$viewValue = viewValue;
       widget.$parseView ? widget.$parseView() : (widget.$modelValue = widget.$viewValue);
-      scopeSet(modelScope, widget.$modelValue);
+      scopeSet(modelScope, copy(widget.$modelValue));
       if (onChange) modelScope.$eval(onChange);
       widget.$emit('$validate');
     }
