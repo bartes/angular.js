@@ -814,6 +814,8 @@ angularWidget('input', function(inputElement){
       });
 
       if (htmlType != 'checkbox' && htmlType != 'radio') {
+        inputElement.data('$input', widget);
+
         // TODO (misko): checkbox / radio does not really belong here, but until we can do
         // widget registration with CSS, we are hacking it this way.
         widget.$render = function() {
