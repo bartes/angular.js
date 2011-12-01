@@ -90,44 +90,45 @@ angularWidget('ng:include', function(element){
     this.directives(true);
   } else {
     element[0]['ng:compiled'] = true;
-    return ['$xhr.cache', '$autoScroll', '$element', function($xhr, $autoScroll, element) {
+    return ['$http', '$templateCache', '$autoScroll', '$element',
+    function($http,   $templateCache,   $autoScroll,   element) {
       var scope = this,
           changeCounter = 0,
-          releaseScopes = [],
-          childScope,
-          oldScope;
+          childScope;
 
       function incrementChange() { changeCounter++;}
       this.$watch(srcExp, incrementChange);
-      this.$watch(function(scope){
-        var newScope = scope.$eval(scopeExp);
-        if (newScope !== oldScope) {
-          oldScope = newScope;
-          incrementChange();
-        }
-      });
-      this.$watch(function() {return changeCounter;}, function(scope) {
+      this.$watch(function() {
+        var includeScope = scope.$eval(scopeExp);
+        if (includeScope) return includeScope.$id;
+      }, incrementChange);
+      this.$watch(function() {return changeCounter;}, function(scope, newChangeCounter) {
         var src = scope.$eval(srcExp),
             useScope = scope.$eval(scopeExp);
 
-        while(releaseScopes.length) {
-          releaseScopes.pop().$destroy();
+        function clearContent() {
+          // if this callback is still desired
+          if (newChangeCounter === changeCounter) {
+            if (childScope) childScope.$destroy();
+            childScope = null;
+            element.html('');
+          }
         }
+
         if (src) {
-          $xhr('GET', src, null, function(code, response) {
-            element.html(response);
-            if (useScope) {
-              childScope = useScope;
-            } else {
-              releaseScopes.push(childScope = scope.$new());
+          $http.get(src, {cache: $templateCache}).success(function(response) {
+            // if this callback is still desired
+            if (newChangeCounter === changeCounter) {
+              element.html(response);
+              if (childScope) childScope.$destroy();
+              childScope = useScope ? useScope : scope.$new();
+              compiler.compile(element)(childScope);
+              $autoScroll();
+              scope.$eval(onloadExp);
             }
-            compiler.compile(element)(childScope);
-            $autoScroll();
-            scope.$eval(onloadExp);
-          }, false, true);
+          }).error(clearContent);
         } else {
-          childScope = null;
-          element.html('');
+          clearContent();
         }
       });
     }];
@@ -417,9 +418,9 @@ angularWidget('@ng:repeat', function(expression, element){
         childScope[valueIdent] = value;
         if (keyIdent) childScope[keyIdent] = key;
         childScope.$index = index;
-        childScope.$position = index == 0
-            ? 'first'
-            : (index == collectionLength - 1 ? 'last' : 'middle');
+        childScope.$position = index === 0 ?
+            'first' :
+            (index == collectionLength - 1 ? 'last' : 'middle');
 
         if (!last) {
           linker(childScope, function(clone){
@@ -556,7 +557,8 @@ angularWidget('ng:view', function(element) {
 
   if (!element[0]['ng:compiled']) {
     element[0]['ng:compiled'] = true;
-    return ['$xhr.cache', '$route', '$autoScroll', '$element', function($xhr, $route, $autoScroll, element) {
+    return ['$http', '$templateCache', '$route', '$autoScroll', '$element',
+    function($http,   $templateCache,   $route,   $autoScroll,   element) {
       var template;
       var changeCounter = 0;
 
@@ -566,18 +568,25 @@ angularWidget('ng:view', function(element) {
 
       this.$watch(function() {return changeCounter;}, function(scope, newChangeCounter) {
         var template = $route.current && $route.current.template;
+
+        function clearContent() {
+          // ignore callback if another route change occured since
+          if (newChangeCounter == changeCounter) {
+            element.html('');
+          }
+        }
+
         if (template) {
-          //xhr's callback must be async, see commit history for more info
-          $xhr('GET', template, function(code, response) {
+          $http.get(template, {cache: $templateCache}).success(function(response) {
             // ignore callback if another route change occured since
             if (newChangeCounter == changeCounter) {
               element.html(response);
               compiler.compile(element)($route.current.scope);
               $autoScroll();
             }
-          });
+          }).error(clearContent);
         } else {
-          element.html('');
+          clearContent();
         }
       });
     }];
