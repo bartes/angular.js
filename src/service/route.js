@@ -116,7 +116,7 @@ angularServiceInject('$route', function($location, $routeParams) {
       rootScope = this,
       dirty = 0,
       forceReload = false,
-      stopUpdate = false,
+      stopUpdateUrl = false,
       $route = {
         routes: routes,
 
@@ -221,7 +221,7 @@ angularServiceInject('$route', function($location, $routeParams) {
         }
       };
 
-  this.$watch(function() { return dirty + $location.url(); }, updateRoute);
+  this.$watch(function() { return {dirty: dirty, url: $location.url()}; }, updateRoute);
 
   return $route;
 
@@ -251,15 +251,22 @@ angularServiceInject('$route', function($location, $routeParams) {
     return match ? dst : null;
   }
 
-  function stopUpdateCallback() {
-    stopUpdate = true;
+  function disableUpdate(backUrl) {
+    stopUpdateUrl = backUrl;
+    $location.url(backUrl);
   }
 
-  function refreshUpdateState() {
-    stopUpdate = false;
+  function enableUpdate(newUrl) {
+    if(equals(newUrl, stopUpdateUrl)){
+      stopUpdateUrl = undefined;
+    }
   }
 
-  function updateRoute() {
+  function isUpdateStopped(){
+    return !!stopUpdateUrl;
+  }
+
+  function updateRoute(scope, newValue, oldValue) {
     var next = parseRoute(),
         last = $route.current,
         Controller;
@@ -271,9 +278,13 @@ angularServiceInject('$route', function($location, $routeParams) {
       last.scope && last.scope.$emit('$routeUpdate');
     } else {
       forceReload = false;
-      rootScope.$broadcast('$beforeRouteChange', next, last, stopUpdateCallback);
-      if(stopUpdate) {
-        refreshUpdateState();
+      if(!isUpdateStopped()) {
+        rootScope.$broadcast('$beforeRouteChange', next, last, function(){
+          disableUpdate(oldValue.url);
+        });
+      }
+      if(isUpdateStopped()) {
+        enableUpdate(newValue.url);
         return;
       }
       last && last.scope && last.scope.$destroy();
