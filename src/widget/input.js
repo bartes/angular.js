@@ -716,15 +716,15 @@ angularWidget('input', function(inputElement){
       var form = $formFactory.forElement(inputElement),
           // We have to use .getAttribute, since jQuery tries to be smart and use the
           // type property. Trouble is some browser change unknown to text.
-          type = inputElement[0].getAttribute('type') || 'text',
-          typeForAngular = inputElement[0].getAttribute('ng:type') || type,
+          htmlType = inputElement[0].getAttribute('type') || 'text',
+          ngType = inputElement[0].getAttribute('ng:type') || htmlType,
           TypeController,
           modelScope = this,
           patternMatch, widget,
           pattern = trim(inputElement.attr('ng:pattern')),
           minlength = parseInt(inputElement.attr('ng:minlength'), 10),
           maxlength = parseInt(inputElement.attr('ng:maxlength'), 10),
-          loadFromScope = type.match(/^\s*\@\s*(.*)/);
+          loadFromScope = ngType.match(/^\s*\@\s*(.*)/);
 
 
        if (!pattern) {
@@ -746,14 +746,14 @@ angularWidget('input', function(inputElement){
          }
        }
 
-      type = lowercase(type);
-      typeForAngular = lowercase(typeForAngular);
+      htmlType = lowercase(htmlType);
+      ngType = lowercase(ngType);
 
       TypeController = (loadFromScope
               ? (assertArgFn(this.$eval(loadFromScope[1]), loadFromScope[1])).$unboundFn
-              : angularInputType(typeForAngular)) || noop;
+              : angularInputType(ngType)) || noop;
 
-      if (!HTML5_INPUTS_TYPES[type]) {
+      if (!HTML5_INPUTS_TYPES[htmlType]) {
         try {
           // jquery will not let you so we have to go to bare metal
           inputElement[0].setAttribute('type', 'text');
@@ -811,7 +811,7 @@ angularWidget('input', function(inputElement){
         widget.$destroy();
       });
 
-      if (type != 'checkbox' && type != 'radio') {
+      if (htmlType != 'checkbox' && htmlType != 'radio') {
         // TODO (misko): checkbox / radio does not really belong here, but until we can do
         // widget registration with CSS, we are hacking it this way.
         widget.$render = function() {
