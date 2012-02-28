@@ -355,6 +355,7 @@ FormController.prototype.$createWidget = function(params) {
       scopeSet = scopeGet.assign,
       widget = this.$new(params.controller, params.controllerArgs);
 
+  widget.$element = modelScope.$element;
   widget.$error = {};
   // Set the state to something we know will change to get the process going.
   widget.$modelValue = Number.NaN;
